@@ -1,0 +1,31 @@
+{
+  "name": "studioranotes",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Premium academic platform combining intelligent scheduling with AI-powered note generation",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "start": "turbo run start",
+    "lint": "turbo run lint",
+    "type-check": "turbo run type-check",
+    "clean": "turbo run clean",
+    "test": "turbo run test"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.3",
+    "@types/node": "^20.17.14",
+    "eslint": "^9.18.0",
+    "prettier": "^3.4.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "packageManager": "npm@10.2.3"
+}

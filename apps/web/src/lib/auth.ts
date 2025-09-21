@@ -11,7 +11,8 @@ export const authOptions: NextAuthOptions = {
           scope: 'openid email profile',
           prompt: 'consent',
           access_type: 'offline',
-          response_type: 'code'
+          response_type: 'code',
+          include_granted_scopes: 'true'
         }
       }
     }),

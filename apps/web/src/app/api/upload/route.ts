@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import pdf from 'pdf-parse'
+// import pdf from 'pdf-parse' // Temporarily disabled - causing build errors
 
 export const runtime = 'nodejs'
 export const maxDuration = 60 // 60 seconds timeout for large files
@@ -38,13 +38,16 @@ export async function POST(request: NextRequest) {
 
     // Handle different file types
     if (file.type === 'application/pdf') {
-      // Parse PDF
-      const buffer = Buffer.from(await file.arrayBuffer())
-      const pdfData = await pdf(buffer)
-
-      extractedText = pdfData.text
-      metadata.pageCount = pdfData.numpages
-      metadata.info = pdfData.info
+      // Parse PDF - temporarily return error until pdf-parse is fixed
+      return NextResponse.json(
+        { error: 'PDF parsing temporarily disabled' },
+        { status: 501 }
+      )
+      // const buffer = Buffer.from(await file.arrayBuffer())
+      // const pdfData = await pdf(buffer)
+      // extractedText = pdfData.text
+      // metadata.pageCount = pdfData.numpages
+      // metadata.info = pdfData.info
     } else if (
       file.type === 'text/plain' ||
       file.type === 'text/markdown' ||

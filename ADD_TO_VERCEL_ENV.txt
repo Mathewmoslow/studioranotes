@@ -1,0 +1,7 @@
+Add this to Vercel Environment Variables:
+
+NEXT_PUBLIC_GOOGLE_API_KEY=paste-your-key-here
+
+Go to: https://vercel.com/mathew-moslows-projects/studioranotes/settings/environment-variables
+
+Add it for all environments (Production, Preview, Development)

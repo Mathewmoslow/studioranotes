@@ -103,8 +103,10 @@ export const dbSync = new DatabaseSync()
 // Helper hook for React components
 import { useEffect, useRef } from 'react'
 import { useScheduleStore } from '@/stores/useScheduleStore'
+import { useSession } from 'next-auth/react'
 
 export function useDatabaseSync() {
+  const { data: session, status } = useSession()
   const syncIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const {
     courses,
@@ -115,25 +117,38 @@ export function useDatabaseSync() {
     settings
   } = useScheduleStore()
 
-  // Initial load from database
+  // Initial load from database (only when authenticated)
   useEffect(() => {
-    const loadData = async () => {
-      const data = await dbSync.loadFromDatabase()
+    if (status !== 'authenticated' || !session?.user?.email) {
+      return
+    }
 
-      if (data && data.courses) {
-        // Update store with database data
-        useScheduleStore.setState({
-          courses: data.courses,
-          tasks: data.tasks
-        })
+    const loadData = async () => {
+      try {
+        const data = await dbSync.loadFromDatabase()
+
+        if (data && data.courses) {
+          // Update store with database data
+          useScheduleStore.setState({
+            courses: data.courses,
+            tasks: data.tasks
+          })
+        }
+      } catch (error) {
+        // Silently handle errors - user might not have data yet
+        console.log('No existing data to load')
       }
     }
 
     loadData()
-  }, [])
+  }, [status, session])
 
-  // Auto-sync to database on changes
+  // Auto-sync to database on changes (only when authenticated)
   useEffect(() => {
+    if (status !== 'authenticated' || !session?.user?.email) {
+      return
+    }
+
     const syncData: SyncState = {
       courses,
       tasks,
@@ -144,10 +159,14 @@ export function useDatabaseSync() {
     }
 
     dbSync.syncToDatabase(syncData)
-  }, [courses, tasks, timeBlocks, preferences])
+  }, [courses, tasks, timeBlocks, preferences, status, session])
 
-  // Periodic sync every 5 minutes
+  // Periodic sync every 5 minutes (only when authenticated)
   useEffect(() => {
+    if (status !== 'authenticated' || !session?.user?.email) {
+      return
+    }
+
     syncIntervalRef.current = setInterval(() => {
       if (dbSync.shouldSync()) {
         const syncData: SyncState = {
@@ -167,10 +186,14 @@ export function useDatabaseSync() {
         clearInterval(syncIntervalRef.current)
       }
     }
-  }, [courses, tasks, timeBlocks, preferences])
+  }, [courses, tasks, timeBlocks, preferences, status, session])
 
-  // Sync before unload
+  // Sync before unload (only when authenticated)
   useEffect(() => {
+    if (status !== 'authenticated' || !session?.user?.email) {
+      return
+    }
+
     const handleBeforeUnload = () => {
       const syncData: SyncState = {
         courses,
@@ -188,7 +211,7 @@ export function useDatabaseSync() {
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload)
     }
-  }, [courses, tasks, timeBlocks, preferences])
+  }, [courses, tasks, timeBlocks, preferences, status, session])
 
   return {
     syncToDatabase: () => {

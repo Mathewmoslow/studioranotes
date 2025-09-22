@@ -154,6 +154,11 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       if (!response.ok) throw new Error('Failed to fetch courses')
 
       const data = await response.json()
+      console.log('🔍 Canvas GET response:', {
+        coursesCount: data.courses?.length,
+        sampleCourse: data.courses?.[0],
+        allCourseIds: data.courses?.map((c: any) => ({ id: c.id, canvasId: c.canvasId, name: c.name }))
+      })
       setCanvasCourses(data.courses || [])
       // Don't auto-select courses - let user choose
       setSelectedCourses([])
@@ -193,21 +198,39 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
         selectedCourses.includes(c.id.toString())
       )
 
+      // Debug logging
+      console.log('🔍 Import Debug:', {
+        selectedCourses,
+        canvasCoursesCount: canvasCourses.length,
+        canvasCourseIds: canvasCourses.map(c => c.id),
+        coursesToImportCount: coursesToImport.length,
+        coursesToImport: coursesToImport.map(c => ({ id: c.id, name: c.name }))
+      })
+
       // Don't import if no courses selected
       if (coursesToImport.length === 0) {
-        console.log('No courses selected for import')
+        console.log('❌ No courses selected for import')
         clearInterval(messageInterval)
         setImportingCourses(false)
+        setImportStatus('No courses selected. Please select courses to import.')
         return
       }
 
       setImportStatus(`📦 Importing ${coursesToImport.length} courses...`)
 
+      // Ensure courses have canvasId field for the API
+      const coursesForAPI = coursesToImport.map(course => ({
+        ...course,
+        canvasId: course.canvasId || course.id // Ensure canvasId is set
+      }))
+
+      console.log('📤 Sending courses to API:', coursesForAPI)
+
       const response = await fetch('/api/canvas/courses', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          courses: coursesToImport,
+          courses: coursesForAPI,
           canvasUrl: formData.canvasUrl,
           canvasToken: formData.canvasToken
         })
@@ -227,7 +250,17 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
           return selectedCourses.includes(courseId)
         })
 
-        console.log(`User selected ${selectedCourses.length} courses, processing ${selectedImportedCourses.length} of ${data.importedCourses.length} returned`)
+        console.log('📊 Import Results:', {
+          selectedCoursesCount: selectedCourses.length,
+          selectedCourseIds: selectedCourses,
+          importedCoursesCount: data.importedCourses?.length || 0,
+          selectedImportedCount: selectedImportedCourses.length,
+          importedCourses: data.importedCourses?.map((c: any) => ({
+            id: c.id,
+            canvasId: c.canvasId,
+            name: c.name
+          }))
+        })
 
         let courseIndex = 0
         for (const course of selectedImportedCourses) {
@@ -264,8 +297,11 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
             c.name === course.name || c.code === course.code
           )
 
+          console.log(`📚 Processing course: ${course.name} (exists: ${courseExists})`)
+
           if (!courseExists) {
             // Add course to store with parsed schedule
+            console.log(`✅ Adding course: ${course.name}`)
             addCourse({
               name: course.name,
               code: course.code,
@@ -314,7 +350,17 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
         }
 
         clearInterval(messageInterval)
-        setImportStatus('✅ All courses imported successfully!')
+
+        // Check final state
+        const { courses: finalCourses } = useScheduleStore.getState()
+        console.log('🏁 Import complete. Final state:', {
+          coursesInStore: finalCourses.length,
+          courseNames: finalCourses.map(c => c.name),
+          selectedCount: selectedCourses.length,
+          importedCount: selectedImportedCourses.length
+        })
+
+        setImportStatus(`✅ All courses imported successfully! ${selectedImportedCourses.length} courses added.`)
         console.log('Successfully imported courses with enhanced data')
       }
     } catch (error) {
@@ -531,7 +577,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                       Select Courses to Import
                     </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                      Found {canvasCourses.length} active courses
+                      Found {canvasCourses.length} active courses • {selectedCourses.length} selected
                     </Typography>
 
                     <Stack spacing={2}>
@@ -542,15 +588,25 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                             p: 2,
                             cursor: 'pointer',
                             border: selectedCourses.includes(course.id.toString()) ? 2 : 1,
-                            borderColor: selectedCourses.includes(course.id.toString()) ? 'primary.main' : 'divider'
+                            borderColor: selectedCourses.includes(course.id.toString()) ? 'primary.main' : 'divider',
+                            backgroundColor: selectedCourses.includes(course.id.toString()) ? 'action.selected' : 'transparent',
+                            transition: 'all 0.2s'
                           }}
                           onClick={() => {
                             const courseId = course.id.toString()
-                            setSelectedCourses(prev =>
-                              prev.includes(courseId)
+                            setSelectedCourses(prev => {
+                              const newSelection = prev.includes(courseId)
                                 ? prev.filter(id => id !== courseId)
                                 : [...prev, courseId]
-                            )
+                              console.log(`🎚️ Course selection changed:`, {
+                                courseId,
+                                courseName: course.name,
+                                action: prev.includes(courseId) ? 'deselected' : 'selected',
+                                totalSelected: newSelection.length,
+                                selectedIds: newSelection
+                              })
+                              return newSelection
+                            })
                           }}
                         >
                           <Stack direction="row" justifyContent="space-between" alignItems="center">
@@ -565,8 +621,19 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                                 Instructor: {course.instructor}
                               </Typography>
                             </Box>
-                            {selectedCourses.includes(course.id.toString()) && (
-                              <Check color="primary" />
+                            {selectedCourses.includes(course.id.toString()) ? (
+                              <Chip
+                                icon={<Check />}
+                                label="Selected"
+                                color="primary"
+                                size="small"
+                              />
+                            ) : (
+                              <Chip
+                                label="Click to select"
+                                size="small"
+                                variant="outlined"
+                              />
                             )}
                           </Stack>
                         </Paper>

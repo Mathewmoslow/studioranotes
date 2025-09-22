@@ -44,16 +44,18 @@ export async function GET(request: NextRequest) {
 
     // Transform Canvas courses to our format
     const courses = canvasCourses.map((course: any) => ({
-      id: course.id,
+      id: course.id,  // This will be used as the key in the UI
       name: course.name,
       code: course.course_code,
       term: course.term?.name || 'Current Term',
       startDate: course.start_at,
       endDate: course.end_at,
       instructor: course.teachers?.[0]?.display_name || 'TBA',
-      canvasId: course.id,
+      canvasId: course.id,  // Store Canvas ID for API calls
       enrollmentType: course.enrollments?.[0]?.type || 'student'
     }))
+
+    console.log(`📚 Returning ${courses.length} courses from Canvas`)
 
     return NextResponse.json({ courses })
 
@@ -80,13 +82,28 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { courses, canvasUrl, canvasToken } = body
 
+    console.log('🔍 API: Received courses to import:', {
+      count: courses?.length,
+      courses: courses?.map((c: any) => ({ id: c.id, canvasId: c.canvasId, name: c.name }))
+    })
+
+    if (!courses || courses.length === 0) {
+      return NextResponse.json({
+        importedCourses: [],
+        message: 'No courses to import'
+      })
+    }
+
     // Import courses and fetch additional details
     const importedCourses = []
 
     for (const course of courses) {
       try {
+        const courseId = course.canvasId || course.id
+        console.log(`📚 API: Processing course ${course.name} (ID: ${courseId})`)
+
         // Fetch assignments for each course
-        const assignmentsUrl = `${canvasUrl}/api/v1/courses/${course.canvasId}/assignments`
+        const assignmentsUrl = `${canvasUrl}/api/v1/courses/${courseId}/assignments`
         const assignmentsResponse = await fetch(assignmentsUrl, {
           headers: {
             'Authorization': `Bearer ${canvasToken}`,
@@ -108,7 +125,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Fetch syllabus if available
-        const syllabusUrl = `${canvasUrl}/api/v1/courses/${course.canvasId}?include[]=syllabus_body`
+        const syllabusUrl = `${canvasUrl}/api/v1/courses/${courseId}?include[]=syllabus_body`
         const syllabusResponse = await fetch(syllabusUrl, {
           headers: {
             'Authorization': `Bearer ${canvasToken}`,
@@ -123,7 +140,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Fetch calendar events for the course
-        const eventsUrl = `${canvasUrl}/api/v1/calendar_events?context_codes[]=course_${course.canvasId}&per_page=100`
+        const eventsUrl = `${canvasUrl}/api/v1/calendar_events?context_codes[]=course_${courseId}&per_page=100`
         const eventsResponse = await fetch(eventsUrl, {
           headers: {
             'Authorization': `Bearer ${canvasToken}`,
@@ -147,7 +164,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Fetch course files to look for schedule documents
-        const filesUrl = `${canvasUrl}/api/v1/courses/${course.canvasId}/files?search_term=schedule&search_term=calendar&search_term=syllabus`
+        const filesUrl = `${canvasUrl}/api/v1/courses/${courseId}/files?search_term=schedule&search_term=calendar&search_term=syllabus`
         const filesResponse = await fetch(filesUrl, {
           headers: {
             'Authorization': `Bearer ${canvasToken}`,
@@ -169,7 +186,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Fetch course modules/pages that might contain schedule info
-        const modulesUrl = `${canvasUrl}/api/v1/courses/${course.canvasId}/modules?include[]=items`
+        const modulesUrl = `${canvasUrl}/api/v1/courses/${courseId}/modules?include[]=items`
         const modulesResponse = await fetch(modulesUrl, {
           headers: {
             'Authorization': `Bearer ${canvasToken}`,
@@ -192,15 +209,20 @@ export async function POST(request: NextRequest) {
           }))
         }
 
-        importedCourses.push({
+        const importedCourse = {
           ...course,
+          id: courseId,
+          canvasId: courseId,
           assignments,
           syllabus,
           calendarEvents,
           courseFiles,
           modules,
           imported: true
-        })
+        }
+
+        console.log(`✅ API: Successfully imported ${course.name} with ${assignments.length} assignments`)
+        importedCourses.push(importedCourse)
 
       } catch (error) {
         console.error(`Failed to import details for course ${course.id}:`, error)
@@ -213,6 +235,8 @@ export async function POST(request: NextRequest) {
         })
       }
     }
+
+    console.log(`🎯 API: Import complete. Returning ${importedCourses.length} courses`)
 
     // Store imported courses in database
     // For now, return the imported data

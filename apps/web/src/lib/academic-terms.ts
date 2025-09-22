@@ -188,13 +188,18 @@ export function getTermByDate(date: Date, system: AcademicSystem = 'trimester'):
 }
 
 export function formatTermName(term: AcademicTerm): string {
+  // Ensure startDate is a Date object
+  const startDate = term.startDate instanceof Date
+    ? term.startDate
+    : new Date(term.startDate);
+
   if (term.system === 'trimester') {
     const trimesterNum = term.type.replace('trimester', '');
-    return `Trimester ${trimesterNum} ${term.startDate.getFullYear()}`;
+    return `Trimester ${trimesterNum} ${startDate.getFullYear()}`;
   }
 
   const termName = term.type.charAt(0).toUpperCase() + term.type.slice(1);
-  return `${termName} ${term.startDate.getFullYear()}`;
+  return `${termName} ${startDate.getFullYear()}`;
 }
 
 // Convert old semester data to new term format

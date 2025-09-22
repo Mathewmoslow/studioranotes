@@ -27,6 +27,16 @@ interface AcademicTermState {
   getCurrentWeek: () => number;
 }
 
+// Helper to ensure dates are Date objects
+const ensureDateObjects = (term: AcademicTerm | null): AcademicTerm | null => {
+  if (!term) return null;
+  return {
+    ...term,
+    startDate: term.startDate instanceof Date ? term.startDate : new Date(term.startDate),
+    endDate: term.endDate instanceof Date ? term.endDate : new Date(term.endDate)
+  };
+};
+
 export const useAcademicTermStore = create<AcademicTermState>()(
   persist(
     (set, get) => ({
@@ -86,8 +96,12 @@ export const useAcademicTermStore = create<AcademicTermState>()(
         if (!currentTerm) return 0;
 
         const now = new Date();
-        const start = new Date(currentTerm.startDate);
-        const end = new Date(currentTerm.endDate);
+        const start = currentTerm.startDate instanceof Date
+          ? currentTerm.startDate
+          : new Date(currentTerm.startDate);
+        const end = currentTerm.endDate instanceof Date
+          ? currentTerm.endDate
+          : new Date(currentTerm.endDate);
 
         if (now < start) return 0;
         if (now > end) return 100;
@@ -103,7 +117,9 @@ export const useAcademicTermStore = create<AcademicTermState>()(
         if (!currentTerm) return 0;
 
         const now = new Date();
-        const end = new Date(currentTerm.endDate);
+        const end = currentTerm.endDate instanceof Date
+          ? currentTerm.endDate
+          : new Date(currentTerm.endDate);
 
         if (now > end) return 0;
 
@@ -118,7 +134,9 @@ export const useAcademicTermStore = create<AcademicTermState>()(
         if (!currentTerm) return 1;
 
         const now = new Date();
-        const start = new Date(currentTerm.startDate);
+        const start = currentTerm.startDate instanceof Date
+          ? currentTerm.startDate
+          : new Date(currentTerm.startDate);
 
         if (now < start) return 1;
 
@@ -135,7 +153,13 @@ export const useAcademicTermStore = create<AcademicTermState>()(
         currentTerm: state.currentTerm,
         selectedSystem: state.selectedSystem,
         universityId: state.universityId,
-      })
+      }),
+      // Ensure dates are converted back to Date objects on rehydration
+      onRehydrateStorage: () => (state) => {
+        if (state && state.currentTerm) {
+          state.currentTerm = ensureDateObjects(state.currentTerm);
+        }
+      }
     }
   )
 );

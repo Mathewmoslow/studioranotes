@@ -11,6 +11,9 @@ export default function CompactTermIndicator() {
 
   if (!currentTerm) return null;
 
+  // Ensure we have valid data
+  if (!termName || termName === 'No Active Term') return null;
+
   // Determine term type for color
   const getTermColor = () => {
     switch (currentTerm.type) {

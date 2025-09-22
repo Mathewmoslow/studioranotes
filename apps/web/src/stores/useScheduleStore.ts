@@ -14,12 +14,25 @@ const generateLectureEventsForCourse = (
   set: (state: any) => void
 ) => {
   if (!course.schedule || course.schedule.length === 0) return;
-  
+
   const state = get();
   const lectureEvents: Event[] = [];
-  const startDate = new Date();
-  const endDate = new Date();
-  endDate.setMonth(endDate.getMonth() + 4); // Generate for 4 months (semester)
+
+  // Get current academic term from the store
+  const academicTermStore = (window as any).__academicTermStore?.getState?.();
+  const currentTerm = academicTermStore?.currentTerm;
+
+  let startDate = new Date();
+  let endDate = new Date();
+
+  if (currentTerm) {
+    // Use actual term dates if available
+    startDate = new Date(currentTerm.startDate);
+    endDate = new Date(currentTerm.endDate);
+  } else {
+    // Fallback to 4 months if no term is set
+    endDate.setMonth(endDate.getMonth() + 4);
+  }
   
   // For each day in the semester
   let currentDate = new Date(startDate);

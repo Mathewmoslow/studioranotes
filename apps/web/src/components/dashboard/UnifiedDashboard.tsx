@@ -43,6 +43,8 @@ import CourseProgressWidget from './widgets/CourseProgressWidget'
 import RecentNotesWidget from './widgets/RecentNotesWidget'
 import StudyActivityChart from './widgets/StudyActivityChart'
 import UpcomingTasks from './widgets/UpcomingTasks'
+import TermSelector from './TermSelector'
+import { initializeAcademicTerm } from '@/stores/academicTermStore'
 
 interface TabPanelProps {
   children?: React.ReactNode
@@ -87,6 +89,9 @@ export default function UnifiedDashboard() {
   }
 
   useEffect(() => {
+    // Initialize academic term on mount
+    initializeAcademicTerm()
+
     // Set up week view
     const start = startOfWeek(new Date())
     const week = Array.from({ length: 7 }, (_, i) => addDays(start, i))
@@ -95,6 +100,9 @@ export default function UnifiedDashboard() {
 
   return (
     <DashboardLayout>
+      {/* Term Selector */}
+      <TermSelector />
+
       {/* Welcome Banner */}
       <Paper
         elevation={0}

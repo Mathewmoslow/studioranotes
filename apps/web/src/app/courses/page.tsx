@@ -35,6 +35,8 @@ import {
   CalendarMonth
 } from '@mui/icons-material'
 import { useScheduleStore } from '@/stores/useScheduleStore'
+import { useAcademicTermStore, useTermDisplay } from '@/stores/academicTermStore'
+import { formatTermName } from '@/lib/academic-terms'
 // Inline EmptyState component
 const EmptyState = ({ icon, title, description, action }) => (
   <Box sx={{ textAlign: 'center', py: 6 }}>
@@ -59,6 +61,10 @@ export default function CoursesPage() {
   const { data: session } = useSession()
   const router = useRouter()
   const { courses, addCourse, updateCourse, deleteCourse } = useScheduleStore()
+  const { currentTerm, selectedSystem, getAvailableTerms } = useAcademicTermStore()
+  const { termName } = useTermDisplay()
+  const availableTerms = getAvailableTerms()
+
   const [openDialog, setOpenDialog] = useState(false)
   const [editingCourse, setEditingCourse] = useState(null)
   const [formData, setFormData] = useState({
@@ -66,16 +72,18 @@ export default function CoursesPage() {
     code: '',
     instructor: '',
     creditHours: 3,
-    semester: 'Spring',
-    year: new Date().getFullYear(),
+    termId: currentTerm?.id || '',
     color: '#667eea'
   })
 
   const handleSubmit = () => {
+    const selectedTerm = availableTerms.find(t => t.id === formData.termId)
     const courseData = {
       id: editingCourse?.id || `course-${Date.now()}`,
       userId: session?.user?.email || 'demo',
       ...formData,
+      semester: selectedTerm ? formatTermName(selectedTerm) : formData.semester,
+      year: selectedTerm ? selectedTerm.startDate.getFullYear() : new Date().getFullYear(),
       createdAt: editingCourse?.createdAt || new Date(),
       updatedAt: new Date()
     }
@@ -93,8 +101,7 @@ export default function CoursesPage() {
       code: '',
       instructor: '',
       creditHours: 3,
-      semester: 'Spring',
-      year: new Date().getFullYear(),
+      termId: currentTerm?.id || '',
       color: '#667eea'
     })
   }
@@ -106,8 +113,7 @@ export default function CoursesPage() {
       code: course.code,
       instructor: course.instructor || '',
       creditHours: course.creditHours || 3,
-      semester: course.semester || 'Spring',
-      year: course.year || new Date().getFullYear(),
+      termId: course.termId || currentTerm?.id || '',
       color: course.color
     })
     setOpenDialog(true)
@@ -300,25 +306,19 @@ export default function CoursesPage() {
               inputProps={{ min: 0, max: 6 }}
             />
             <TextField
-              label="Semester"
+              label="Academic Term"
               select
-              value={formData.semester}
-              onChange={(e) => setFormData({ ...formData, semester: e.target.value })}
+              value={formData.termId}
+              onChange={(e) => setFormData({ ...formData, termId: e.target.value })}
               fullWidth
+              required
             >
-              <MenuItem value="Spring">Spring</MenuItem>
-              <MenuItem value="Summer">Summer</MenuItem>
-              <MenuItem value="Fall">Fall</MenuItem>
-              <MenuItem value="Winter">Winter</MenuItem>
+              {availableTerms.map((term) => (
+                <MenuItem key={term.id} value={term.id}>
+                  {formatTermName(term)} ({new Date(term.startDate).toLocaleDateString()} - {new Date(term.endDate).toLocaleDateString()})
+                </MenuItem>
+              ))}
             </TextField>
-            <TextField
-              label="Year"
-              type="number"
-              value={formData.year}
-              onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value) })}
-              fullWidth
-              inputProps={{ min: 2020, max: 2030 }}
-            />
             <TextField
               label="Color"
               type="color"

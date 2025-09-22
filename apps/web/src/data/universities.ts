@@ -21,6 +21,24 @@ export interface UniversityConfig {
 }
 
 export const universities: Record<string, UniversityConfig> = {
+  // Healthcare Universities
+  'adventhealth': {
+    id: 'adventhealth',
+    name: 'Advent Health University',
+    shortName: 'AHU',
+    canvasUrl: 'https://ahu.instructure.com',
+    system: 'trimester',
+    termLength: 14,
+    termsPerYear: 3,
+    gradeScale: 'standard',
+    timezone: 'America/New_York',
+    colors: { primary: '#0066CC', secondary: '#F5B800' },
+    features: {
+      hasWinterSession: false,
+      hasSummerSession: false,
+    }
+  },
+
   // California Universities
   'ucla': {
     id: 'ucla',

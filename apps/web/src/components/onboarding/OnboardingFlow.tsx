@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import {
   Box,
   Stepper,
@@ -56,6 +56,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const [canvasConnected, setCanvasConnected] = useState(false)
   const [canvasCourses, setCanvasCourses] = useState<any[]>([])
   const [selectedCourses, setSelectedCourses] = useState<string[]>([])
+  const selectedCoursesRef = useRef<string[]>([])  // Use ref to preserve state across closures
   const [error, setError] = useState<string | null>(null)
   const [importingCourses, setImportingCourses] = useState(false)
   const [importStatus, setImportStatus] = useState('')
@@ -92,11 +93,21 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
 
       // Auto-start import after showing success briefly
       setTimeout(async () => {
-        if (selectedCourses.length > 0 && canvasConnected) {
+        const coursesToImport = selectedCoursesRef.current  // Use ref to get current value
+        console.log('🚦 Auto-import check:', {
+          selectedCoursesLength: coursesToImport.length,
+          selectedCourses: coursesToImport,
+          canvasConnected,
+          shouldImport: coursesToImport.length > 0 && canvasConnected
+        })
+
+        if (coursesToImport.length > 0 && canvasConnected) {
+          console.log('🚀 Starting auto-import of courses...')
           await importCanvasCourses()
           // Complete after import
           setTimeout(() => onComplete(), 1500)
         } else {
+          console.log('⏭️ Skipping import - no courses selected or not connected')
           // No courses, just complete
           setTimeout(() => onComplete(), 2000)
         }
@@ -193,14 +204,21 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
         messageIndex++
       }, 2000)
 
+      // Use ref to get the most current selected courses
+      const currentSelectedCourses = selectedCoursesRef.current.length > 0
+        ? selectedCoursesRef.current
+        : selectedCourses  // Fallback to state if ref is empty
+
       // Only import courses that were selected
       const coursesToImport = canvasCourses.filter(c =>
-        selectedCourses.includes(c.id.toString())
+        currentSelectedCourses.includes(c.id.toString())
       )
 
       // Debug logging
       console.log('🔍 Import Debug:', {
-        selectedCourses,
+        selectedCoursesFromState: selectedCourses,
+        selectedCoursesFromRef: selectedCoursesRef.current,
+        currentSelectedCourses,
         canvasCoursesCount: canvasCourses.length,
         canvasCourseIds: canvasCourses.map(c => c.id),
         coursesToImportCount: coursesToImport.length,
@@ -247,12 +265,12 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
         const selectedImportedCourses = data.importedCourses.filter((course: any) => {
           // Check if this course was in our selected list
           const courseId = course.canvasId?.toString() || course.id?.toString()
-          return selectedCourses.includes(courseId)
+          return currentSelectedCourses.includes(courseId)
         })
 
         console.log('📊 Import Results:', {
-          selectedCoursesCount: selectedCourses.length,
-          selectedCourseIds: selectedCourses,
+          selectedCoursesCount: currentSelectedCourses.length,
+          selectedCourseIds: currentSelectedCourses,
           importedCoursesCount: data.importedCourses?.length || 0,
           selectedImportedCount: selectedImportedCourses.length,
           importedCourses: data.importedCourses?.map((c: any) => ({
@@ -605,6 +623,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                                 totalSelected: newSelection.length,
                                 selectedIds: newSelection
                               })
+                              selectedCoursesRef.current = newSelection  // Update ref
                               return newSelection
                             })
                           }}
@@ -762,6 +781,19 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                     <Alert severity="success">
                       <strong>✓ Canvas connected</strong> - {canvasCourses.length} courses found, {selectedCourses.length} selected
                     </Alert>
+                  )}
+                  {selectedCourses.length > 0 && !importingCourses && (
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      onClick={async () => {
+                        console.log('🔄 Manual import triggered')
+                        await importCanvasCourses()
+                      }}
+                      sx={{ mt: 2 }}
+                    >
+                      Import Selected Courses Now
+                    </Button>
                   )}
                   <Alert severity="success">
                     <strong>✓ Study preferences</strong> - {formData.sessionDuration} min sessions, {formData.preferredTimes.length > 0 ? formData.preferredTimes.join(', ') : 'flexible schedule'}

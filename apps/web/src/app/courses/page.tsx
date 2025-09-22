@@ -207,16 +207,20 @@ export default function CoursesPage() {
                   )}
 
                   <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
-                    <Chip
-                      size="small"
-                      icon={<CalendarMonth />}
-                      label={`${course.semester} ${course.year}`}
-                    />
-                    <Chip
-                      size="small"
-                      icon={<Schedule />}
-                      label={`${course.creditHours} credits`}
-                    />
+                    {course.semester && (
+                      <Chip
+                        size="small"
+                        icon={<CalendarMonth />}
+                        label={`${course.semester}${course.year ? ` ${course.year}` : ''}`}
+                      />
+                    )}
+                    {course.creditHours && (
+                      <Chip
+                        size="small"
+                        icon={<Schedule />}
+                        label={`${course.creditHours} credits`}
+                      />
+                    )}
                   </Stack>
 
                   {course.progress > 0 && (

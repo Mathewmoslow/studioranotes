@@ -43,7 +43,7 @@ import CourseProgressWidget from './widgets/CourseProgressWidget'
 import RecentNotesWidget from './widgets/RecentNotesWidget'
 import StudyActivityChart from './widgets/StudyActivityChart'
 import UpcomingTasks from './widgets/UpcomingTasks'
-import TermSelector from './TermSelector'
+import CompactTermIndicator from './CompactTermIndicator'
 import { initializeAcademicTerm } from '@/stores/academicTermStore'
 
 interface TabPanelProps {
@@ -100,8 +100,8 @@ export default function UnifiedDashboard() {
 
   return (
     <DashboardLayout>
-      {/* Term Selector */}
-      <TermSelector />
+      {/* Compact Term Indicator */}
+      <CompactTermIndicator />
 
       {/* Welcome Banner */}
       <Paper

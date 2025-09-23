@@ -125,18 +125,51 @@ export function useDatabaseSync() {
 
     const loadData = async () => {
       try {
-        const data = await dbSync.loadFromDatabase()
+        // Check if we already have data in the store (from onboarding or local storage)
+        const currentState = useScheduleStore.getState()
+        const hasLocalData = currentState.courses.length > 0 || currentState.tasks.length > 0
 
-        if (data && data.courses) {
-          // Update store with database data
-          useScheduleStore.setState({
-            courses: data.courses,
-            tasks: data.tasks
-          })
+        console.log('🔍 DB Sync: Checking for existing data...', {
+          hasLocalData,
+          coursesCount: currentState.courses.length,
+          tasksCount: currentState.tasks.length
+        })
+
+        // Only load from database if we don't have local data
+        // This prevents overwriting freshly imported courses from onboarding
+        if (!hasLocalData) {
+          console.log('📥 DB Sync: No local data found, loading from database...')
+          const data = await dbSync.loadFromDatabase()
+
+          if (data && data.courses) {
+            console.log('✅ DB Sync: Loaded data from database:', {
+              coursesCount: data.courses.length,
+              tasksCount: data.tasks.length
+            })
+            // Update store with database data
+            useScheduleStore.setState({
+              courses: data.courses,
+              tasks: data.tasks
+            })
+          } else {
+            console.log('📭 DB Sync: No data in database')
+          }
+        } else {
+          console.log('💾 DB Sync: Using existing local data, skipping database load')
+          // Sync local data to database instead
+          const syncData: SyncState = {
+            courses: currentState.courses,
+            tasks: currentState.tasks,
+            notes: [],
+            studyBlocks: currentState.timeBlocks,
+            preferences: currentState.preferences,
+            onboardingCompleted: true
+          }
+          dbSync.syncToDatabase(syncData)
         }
       } catch (error) {
         // Silently handle errors - user might not have data yet
-        console.log('No existing data to load')
+        console.log('⚠️ DB Sync: Error loading data:', error)
       }
     }
 

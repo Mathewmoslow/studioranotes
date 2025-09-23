@@ -39,8 +39,7 @@ import { getCourseColor } from '@/lib/courseColors'
 
 const steps = [
   'Welcome',
-  'University Setup',
-  'Canvas Integration',
+  'University & Canvas Setup',
   'Study Preferences',
   'Get Started',
 ]
@@ -75,13 +74,13 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const handleNext = async () => {
     setError(null)
 
-    // Handle Canvas connection step
-    if (activeStep === 2 && formData.canvasUrl && formData.canvasToken) {
+    // Handle Canvas connection step (now combined with university setup)
+    if (activeStep === 1 && formData.canvasUrl && formData.canvasToken) {
       await connectToCanvas()
     }
 
-    // When moving from Study Preferences (step 3) to Final (step 4)
-    if (activeStep === 3) {
+    // When moving from Study Preferences (step 2) to Final (step 3)
+    if (activeStep === 2) {
       // Save preferences with university config
       const universityConfig = getUniversityConfig(formData.university)
       localStorage.setItem('onboarding_preferences', JSON.stringify({
@@ -460,12 +459,13 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
         return (
           <Box sx={{ py: 4 }}>
             <Typography variant="h5" fontWeight={600} gutterBottom>
-              Select Your University
+              University & Canvas Setup
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              This helps us customize your experience and auto-configures Canvas integration
+              Select your university and connect Canvas LMS for automatic course import
             </Typography>
 
+            {/* University Selection */}
             <FormControl fullWidth sx={{ mb: 3 }}>
               <InputLabel>University</InputLabel>
               <Select
@@ -498,7 +498,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
             </FormControl>
 
             {formData.university && formData.university !== 'other' && (
-              <Alert severity="success" sx={{ mb: 2 }}>
+              <Alert severity="success" sx={{ mb: 3 }}>
                 <Typography variant="body2">
                   <strong>Canvas URL auto-configured:</strong> {getCanvasUrl(formData.university)}
                 </Typography>
@@ -507,23 +507,16 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                     Quarter system detected - scheduling will adapt to 10-week terms
                   </Typography>
                 )}
+                {getUniversityConfig(formData.university)?.system === 'trimester' && (
+                  <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                    Trimester system detected - scheduling will adapt to 15-week terms
+                  </Typography>
+                )}
               </Alert>
             )}
 
-            {formData.university === 'other' && (
-              <Alert severity="info">
-                <Typography variant="body2">
-                  You'll need to enter your Canvas URL manually in the next step
-                </Typography>
-              </Alert>
-            )}
-          </Box>
-        )
-
-      case 2:
-        return (
-          <Box sx={{ py: 4 }}>
-            <Typography variant="h5" fontWeight={600} gutterBottom>
+            {/* Canvas Integration */}
+            <Typography variant="h6" fontWeight={600} gutterBottom sx={{ mt: 4 }}>
               Connect Canvas LMS (Optional)
             </Typography>
             <Alert severity="info" sx={{ mb: 3 }}>
@@ -666,7 +659,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
           </Box>
         )
 
-      case 3:
+      case 2:
         return (
           <Box sx={{ py: 4 }}>
             <Typography variant="h5" fontWeight={600} gutterBottom>
@@ -735,7 +728,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
           </Box>
         )
 
-      case 4:
+      case 3:
         return (
           <Box sx={{ textAlign: 'center', py: 4 }}>
             {importingCourses ? (

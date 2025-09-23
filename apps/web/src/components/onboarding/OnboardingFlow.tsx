@@ -35,6 +35,7 @@ import {
 import { useSession } from 'next-auth/react'
 import { useScheduleStore } from '@/stores/useScheduleStore'
 import { getUniversityList, getCanvasUrl, getUniversityConfig } from '@/data/universities'
+import { getCourseColor } from '@/lib/courseColors'
 
 const steps = [
   'Welcome',
@@ -325,7 +326,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
               code: course.code,
               instructor: course.instructor,
               schedule: parsedSchedule?.lectures || [],
-              color: '#' + Math.floor(Math.random()*16777215).toString(16),
+              color: getCourseColor(courseIndex - 1),
               credits: 3,
               location: 'TBA',
               // Store additional data for later use

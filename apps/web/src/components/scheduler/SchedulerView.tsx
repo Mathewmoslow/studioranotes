@@ -142,15 +142,16 @@ const SchedulerView: React.FC = () => {
   };
   
   const getEventColor = (event: Event) => {
-    // More distinct colors for different event types
-    if (event.type === 'deadline') {
-      return '#ef4444'; // Bright red for deadlines
-    }
-    
     const course = getCourseForEvent(event);
-    if (course) return course.color;
-    
+
+    // Always use course color if available
+    if (course?.color) {
+      return course.color;
+    }
+
+    // Fallback colors for different event types when no course color
     switch (event.type) {
+      case 'deadline': return '#ef4444'; // Bright red for deadlines
       case 'exam': return '#dc2626'; // Dark red for exams
       case 'clinical': return '#7c3aed'; // Purple for clinical
       case 'lab': return '#f59e0b'; // Amber for labs
@@ -529,53 +530,45 @@ const SchedulerView: React.FC = () => {
                       const width = `calc(${100 / totalColumns}% - 4px)`;
                       const leftPosition = `${(column * 100) / totalColumns}%`;
                       
-                      // Different styles and colors for different task types
+                      // Use course color for study blocks with pattern for different task types
                       const getBlockStyle = () => {
-                        // Different colors for different task types for better visual distinction
-                        switch (task?.type) {
-                          case 'exam':
-                            return {
-                              backgroundColor: '#fee2e2', // Light red
-                              borderLeft: `4px solid #dc2626`,
-                              color: '#991b1b'
-                            };
-                          case 'assignment':
-                            return {
-                              backgroundColor: '#dbeafe', // Light blue
-                              borderLeft: `4px solid #2563eb`,
-                              color: '#1e40af'
-                            };
-                          case 'reading':
-                            return {
-                              backgroundColor: '#fef3c7', // Light yellow
-                              borderLeft: `4px solid #f59e0b`,
-                              color: '#92400e'
-                            };
-                          case 'project':
-                            return {
-                              backgroundColor: '#ede9fe', // Light purple
-                              borderLeft: `4px solid #7c3aed`,
-                              color: '#5b21b6'
-                            };
-                          case 'quiz':
-                            return {
-                              backgroundColor: '#fce7f3', // Light pink
-                              borderLeft: `4px solid #ec4899`,
-                              color: '#9f1239'
-                            };
-                          case 'lab':
-                            return {
-                              backgroundColor: '#d1fae5', // Light green
-                              borderLeft: `4px solid #10b981`,
-                              color: '#065f46'
-                            };
-                          default:
-                            return {
-                              backgroundColor: '#f3f4f6', // Light gray
-                              borderLeft: `4px solid #6b7280`,
-                              color: '#374151'
-                            };
+                        const courseColor = course?.color || '#6b7280';
+
+                        // Create a lighter background version of the course color
+                        const lightenColor = (color: string) => {
+                          // Convert hex to RGB
+                          const r = parseInt(color.slice(1, 3), 16);
+                          const g = parseInt(color.slice(3, 5), 16);
+                          const b = parseInt(color.slice(5, 7), 16);
+                          // Create a lighter version with 15% opacity
+                          return `rgba(${r}, ${g}, ${b}, 0.15)`;
+                        };
+
+                        const baseStyle = {
+                          backgroundColor: lightenColor(courseColor),
+                          borderLeft: `4px solid ${courseColor}`,
+                          color: '#374151',
+                          // Add pattern for study blocks (diagonal stripes)
+                          backgroundImage: `repeating-linear-gradient(
+                            45deg,
+                            transparent,
+                            transparent 10px,
+                            rgba(255,255,255,0.1) 10px,
+                            rgba(255,255,255,0.1) 20px
+                          )`,
+                          backgroundSize: 'cover'
+                        };
+
+                        // Add specific border styles for different task types
+                        if (task?.type === 'exam' || task?.type === 'quiz') {
+                          return {
+                            ...baseStyle,
+                            border: `2px dashed ${courseColor}`,
+                            borderLeft: `4px solid ${courseColor}`
+                          };
                         }
+
+                        return baseStyle;
                       };
                       
                       const blockStyle = getBlockStyle();

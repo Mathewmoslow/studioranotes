@@ -521,41 +521,171 @@ export default function CourseDetailPage() {
             </CardContent>
           </Card>
         ) : (
-          <List>
+          <Grid container spacing={2}>
             {courseTasks
               .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime())
-              .map((task, index) => (
-                <React.Fragment key={task.id}>
-                  {index > 0 && <Divider />}
-                  <ListItem>
-                    <ListItemIcon>
-                      {getTaskIcon(task.type)}
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={task.title}
-                      secondary={
-                        <Stack direction="row" spacing={2} component="span">
-                          <span>Due: {format(task.dueDate, 'MMM d, yyyy h:mm a')}</span>
-                          {task.description && <span>• {task.description}</span>}
-                        </Stack>
-                      }
-                    />
-                    <Stack direction="row" spacing={1}>
-                      <Chip
-                        label={task.type}
-                        size="small"
-                        color="primary"
-                      />
-                      <Chip
-                        label={task.status}
-                        size="small"
-                        color={task.status === 'completed' ? 'success' : 'default'}
-                      />
-                    </Stack>
-                  </ListItem>
-                </React.Fragment>
-              ))}
-          </List>
+              .map((task, index) => {
+                const daysUntilDue = Math.floor((task.dueDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+                const isOverdue = task.dueDate < new Date() && task.status !== 'completed';
+                const isDueSoon = daysUntilDue <= 3 && daysUntilDue >= 0;
+
+                const getUrgencyColor = () => {
+                  if (isOverdue) return '#ef4444';
+                  if (daysUntilDue < 1) return '#dc2626';
+                  if (daysUntilDue < 3) return '#f97316';
+                  if (daysUntilDue < 7) return '#eab308';
+                  return course.color || '#10b981';
+                };
+
+                const getTaskTypeColor = () => {
+                  switch (task.type) {
+                    case 'exam': return { bg: 'rgba(239,68,68,0.1)', color: '#dc2626' };
+                    case 'quiz': return { bg: 'rgba(236,72,153,0.1)', color: '#ec4899' };
+                    case 'assignment': return { bg: 'rgba(37,99,235,0.1)', color: '#2563eb' };
+                    case 'project': return { bg: 'rgba(124,58,237,0.1)', color: '#7c3aed' };
+                    case 'reading': return { bg: 'rgba(245,158,11,0.1)', color: '#f59e0b' };
+                    case 'lab': return { bg: 'rgba(16,185,129,0.1)', color: '#10b981' };
+                    default: return { bg: 'rgba(107,114,128,0.1)', color: '#6b7280' };
+                  }
+                };
+
+                const typeStyle = getTaskTypeColor();
+
+                return (
+                  <Grid size={12} key={task.id}>
+                    <Card
+                      sx={{
+                        borderLeft: `4px solid ${getUrgencyColor()}`,
+                        backgroundColor: task.status === 'completed' ? 'rgba(243,244,246,0.5)' : 'background.paper',
+                        opacity: task.status === 'completed' ? 0.7 : 1,
+                        transition: 'all 0.2s',
+                        '&:hover': {
+                          boxShadow: 2,
+                          transform: 'translateX(4px)'
+                        }
+                      }}
+                    >
+                      <CardContent sx={{ p: 2 }}>
+                        <Grid container alignItems="center" spacing={2}>
+                          {/* Icon and Status */}
+                          <Grid size="auto">
+                            <Box
+                              sx={{
+                                width: 48,
+                                height: 48,
+                                borderRadius: 2,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                backgroundColor: typeStyle.bg,
+                                color: typeStyle.color
+                              }}
+                            >
+                              {getTaskIcon(task.type)}
+                            </Box>
+                          </Grid>
+
+                          {/* Task Details */}
+                          <Grid size>
+                            <Typography
+                              variant="body1"
+                              fontWeight={600}
+                              sx={{
+                                textDecoration: task.status === 'completed' ? 'line-through' : 'none',
+                                color: task.status === 'completed' ? 'text.secondary' : 'text.primary'
+                              }}
+                            >
+                              {task.title}
+                            </Typography>
+                            <Stack direction="row" spacing={2} alignItems="center" sx={{ mt: 0.5 }}>
+                              <Typography variant="body2" color="text.secondary">
+                                Due: {format(task.dueDate, 'MMM d, yyyy h:mm a')}
+                              </Typography>
+                              {isOverdue && (
+                                <Chip
+                                  label="OVERDUE"
+                                  size="small"
+                                  sx={{
+                                    backgroundColor: '#ef4444',
+                                    color: 'white',
+                                    fontWeight: 600,
+                                    height: 20
+                                  }}
+                                />
+                              )}
+                              {isDueSoon && !isOverdue && (
+                                <Chip
+                                  label="DUE SOON"
+                                  size="small"
+                                  sx={{
+                                    backgroundColor: '#f97316',
+                                    color: 'white',
+                                    fontWeight: 600,
+                                    height: 20
+                                  }}
+                                />
+                              )}
+                            </Stack>
+                            {task.description && (
+                              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                                {task.description}
+                              </Typography>
+                            )}
+                          </Grid>
+
+                          {/* Task Type and Status Badges */}
+                          <Grid size="auto">
+                            <Stack direction="row" spacing={1}>
+                              <Chip
+                                label={task.type.toUpperCase()}
+                                size="small"
+                                sx={{
+                                  backgroundColor: typeStyle.bg,
+                                  color: typeStyle.color,
+                                  fontWeight: 600
+                                }}
+                              />
+                              <Chip
+                                label={task.status}
+                                size="small"
+                                variant={task.status === 'completed' ? 'filled' : 'outlined'}
+                                color={task.status === 'completed' ? 'success' : 'default'}
+                              />
+                            </Stack>
+                          </Grid>
+                        </Grid>
+
+                        {/* Progress indicator for in-progress tasks */}
+                        {task.status === 'in-progress' && task.progress !== undefined && (
+                          <Box sx={{ mt: 2 }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                              <Typography variant="caption" color="text.secondary">
+                                Progress
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {task.progress}%
+                              </Typography>
+                            </Box>
+                            <LinearProgress
+                              variant="determinate"
+                              value={task.progress}
+                              sx={{
+                                height: 6,
+                                borderRadius: 3,
+                                backgroundColor: 'rgba(0,0,0,0.1)',
+                                '& .MuiLinearProgress-bar': {
+                                  backgroundColor: course.color
+                                }
+                              }}
+                            />
+                          </Box>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                );
+              })}
+          </Grid>
         )}
       </TabPanel>
 
